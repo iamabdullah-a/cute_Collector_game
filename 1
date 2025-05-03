@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cute Collector</title>
+    <style>
+        :root {
+            --primary: #FF9AA2;
+            --secondary: #FFB7B2;
+            --accent: #FFDAC1;
+            --background: #E2F0CB;
+            --text: #5E5E5E;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+        }
+
+        body {
+            background-color: var(--background);
+            color: var(--text);
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #game-container {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            background-color: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        #game-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        #menu-screen, #character-select, #game-over-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(255, 255, 255, 0.9);
+            z-index: 10;
+        }
+
+        #game-over-screen {
+            display: none;
+        }
+
+        .title {
+            font-size: 4rem;
+            color: var(--primary);
+            margin-bottom: 20px;
+            text-shadow: 3px 3px 0 var(--accent);
+        }
+
+        .subtitle {
+            font-size: 1.5rem;
+            color: var(--text);
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            margin: 10px;
+            border: none;
+            border-radius: 50px;
+            background-color: var(--primary);
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            background-color: #ff7e88;
+        }
+
+        .character-card {
+            width: 200px;
+            padding: 20px;
+            margin: 15px;
+            border-radius: 15px;
+            background-color: white;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .character-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .character-card.selected {
+            border: 4px solid var(--primary);
+            background-color: var(--accent);
+        }
+
+        .character-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            margin: 0 auto 15px;
+            background-color: var(--secondary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 3rem;
+        }
+
+        .character-name {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            color: var(--primary);
+        }
+
+        .character-desc {
+            font-size: 0.9rem;
+            color: var(--text);
+        }
+
+        #characters-container {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+
+        #ui-container {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            gap: 20px;
+            z-index: 5;
+        }
+
+        .ui-element {
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 10px 15px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+        }
+
+        .ui-icon {
+            margin-right: 8px;
+            font-size: 1.2rem;
+        }
+
+        #level-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 10px 15px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            font-size: 1.2rem;
+        }
+
+        #game-over-message {
+            font-size: 2rem;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        #final-score {
+            font-size: 1.5rem;
+            margin-bottom: 30px;
+            color: var(--primary);
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+        
+        <!-- Menu Screen -->
+        <div id="menu-screen">
+            <h1 class="title">Cute Collector</h1>
+            <p class="subtitle">Collect all the cute things before time runs out!</p>
+            <button id="start-btn" class="btn">Start Game</button>
+        </div>
+        
+        <!-- Character Select Screen -->
+        <div id="character-select" style="display: none;">
+            <h1 class="title">Choose Your Character</h1>
+            <div id="characters-container">
+                <div class="character-card" data-character="hammad">
+                    <div class="character-avatar">🏃</div>
+                    <h3 class="character-name">Hammad</h3>
+                    <p class="character-desc">Fastest speed but lower control</p>
+                </div>
+                <div class="character-card" data-character="abdullah">
+                    <div class="character-avatar">🧑</div>
+                    <h3 class="character-name">Abdullah</h3>
+                    <p class="character-desc">Balanced stats; easier to handle</p>
+                </div>
+                <div class="character-card" data-character="moiz">
+                    <div class="character-avatar">🐢</div>
+                    <h3 class="character-name">Moiz</h3>
+                    <p class="character-desc">Slower, but gains extra points</p>
+                </div>
+            </div>
+            <button id="play-btn" class="btn">Play!</button>
+        </div>
+        
+        <!-- Game UI (hidden initially) -->
+        <div id="ui-container" style="display: none;">
+            <div class="ui-element">
+                <span class="ui-icon">❤️</span>
+                <span id="health">3</span>
+            </div>
+            <div class="ui-element">
+                <span class="ui-icon">⏱️</span>
+                <span id="timer">60</span>
+            </div>
+            <div class="ui-element">
+                <span class="ui-icon">⭐</span>
+                <span id="score">0</span>
+            </div>
+        </div>
+        
+        <div id="level-indicator" style="display: none;">Level 1</div>
+        
+        <!-- Game Over Screen -->
+        <div id="game-over-screen">
+            <h1 id="game-over-message">Game Over!</h1>
+            <p id="final-score">Your score: 0</p>
+            <button id="restart-btn" class="btn">Play Again</button>
+            <button id="menu-btn" class="btn">Back to Menu</button>
+        </div>
+    </div>
+
+    <script>
+        // Game Constants
+        const GAME_WIDTH = 800;
+        const GAME_HEIGHT = 600;
+        const PLAYER_SIZE = 40;
+        const ITEM_SIZE = 30;
+        const ENEMY_SIZE = 35;
+        const COLLISION_BUFFER = 5;
+        
+        // Game Variables
+        let canvas, ctx;
+        let gameActive = false;
+        let selectedCharacter = null;
+        let player = {};
+        let items = [];
+        let enemies = [];
+        let score = 0;
+        let health = 3;
+        let timeLeft = 60;
+        let level = 1;
+        let gameLoop;
+        let timerInterval;
+        let keys = {};
+        
+        // Character stats
+        const CHARACTERS = {
+            hammad: { speed: 6, control: 0.8, pointMultiplier: 1, avatar: "🏃" },
+            abdullah: { speed: 4, control: 1, pointMultiplier: 1, avatar: "🧑" },
+            moiz: { speed: 3, control: 1, pointMultiplier: 1.5, avatar: "🐢" }
+        };
+        
+        // Initialize the game
+        function init() {
+            canvas = document.getElementById('game-canvas');
+            ctx = canvas.getContext('2d');
+            
+            // Set canvas dimensions
+            canvas.width = GAME_WIDTH;
+            canvas.height = GAME_HEIGHT;
+            
+            // Event listeners
+            document.getElementById('start-btn').addEventListener('click', showCharacterSelect);
+            document.getElementById('play-btn').addEventListener('click', startGame);
+            document.getElementById('restart-btn').addEventListener('click', restartGame);
+            document.getElementById('menu-btn').addEventListener('click', returnToMenu);
+            
+            // Character selection
+            const characterCards = document.querySelectorAll('.character-card');
+            characterCards.forEach(card => {
+                card.addEventListener('click', function() {
+                    characterCards.forEach(c => c.classList.remove('selected'));
+                    this.classList.add('selected');
+                    selectedCharacter = this.getAttribute('data-character');
+                });
+            });
+            
+            // Keyboard controls
+            window.addEventListener('keydown', function(e) {
+                keys[e.key] = true;
+            });
+            
+            window.addEventListener('keyup', function(e) {
+                keys[e.key] = false;
+            });
+        }
+        
+        // Show character selection screen
+        function showCharacterSelect() {
+            document.getElementById('menu-screen').style.display = 'none';
+            document.getElementById('character-select').style.display = 'flex';
+        }
+        
+        // Start the game
+        function startGame() {
+            if (!selectedCharacter) {
+                alert('Please select a character first!');
+                return;
+            }
+            
+            document.getElementById('character-select').style.display = 'none';
+            document.getElementById('ui-container').style.display = 'flex';
+            document.getElementById('level-indicator').style.display = 'block';
+            
+            // Reset game state
+            score = 0;
+            health = 3;
+            level = 1;
+            
+            // Initialize player
+            player = {
+                x: GAME_WIDTH / 2 - PLAYER_SIZE / 2,
+                y: GAME_HEIGHT / 2 - PLAYER_SIZE / 2,
+                width: PLAYER_SIZE,
+                height: PLAYER_SIZE,
+                speed: CHARACTERS[selectedCharacter].speed,
+                control: CHARACTERS[selectedCharacter].control,
+                pointMultiplier: CHARACTERS[selectedCharacter].pointMultiplier,
+                avatar: CHARACTERS[selectedCharacter].avatar,
+                dx: 0,
+                dy: 0
+            };
+            
+            // Generate level
+            generateLevel();
+            
+            // Start game loop
+            gameActive = true;
+            startTimer();
+            gameLoop = requestAnimationFrame(update);
+        }
+        
+        // Generate level elements
+        function generateLevel() {
+            items = [];
+            enemies = [];
+            
+            // Update level display
+            document.getElementById('level-indicator').textContent = `Level ${level}`;
+            
+            // Set time based on level
+            timeLeft = Math.max(30, 60 - (level * 5));
+            document.getElementById('timer').textContent = timeLeft;
+            
+            // Generate items (more items as levels progress)
+            const itemCount = 5 + level * 2;
+            for (let i = 0; i < itemCount; i++) {
+                items.push({
+                    x: Math.random() * (GAME_WIDTH - ITEM_SIZE * 2) + ITEM_SIZE,
+                    y: Math.random() * (GAME_HEIGHT - ITEM_SIZE * 2) + ITEM_SIZE,
+                    width: ITEM_SIZE,
+                    height: ITEM_SIZE,
+                    type: Math.floor(Math.random() * 3), // 0: plushie, 1: cupcake, 2: pet
+                    collected: false
+                });
+            }
+            
+            // Generate enemies (more enemies as levels progress)
+            const enemyCount = 2 + level;
+            for (let i = 0; i < enemyCount; i++) {
+                enemies.push({
+                    x: Math.random() * (GAME_WIDTH - ENEMY_SIZE * 2) + ENEMY_SIZE,
+                    y: Math.random() * (GAME_HEIGHT - ENEMY_SIZE * 2) + ENEMY_SIZE,
+                    width: ENEMY_SIZE,
+                    height: ENEMY_SIZE,
+                    dx: (Math.random() - 0.5) * (3 + level * 0.5),
+                    dy: (Math.random() - 0.5) * (3 + level * 0.5),
+                    type: Math.floor(Math.random() * 3) // 0: blob, 1: ghost, 2: star
+                });
+            }
+        }
+        
+        // Start the game timer
+        function startTimer() {
+            clearInterval(timerInterval);
+            timerInterval = setInterval(function() {
+                timeLeft--;
+                document.getElementById('timer').textContent = timeLeft;
+                
+                if (timeLeft <= 0) {
+                    endGame(false);
+                }
+            }, 1000);
+        }
+        
+        // Main game loop
+        function update() {
+            if (!gameActive) return;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+            
+            // Draw background
+            drawBackground();
+            
+            // Handle player movement
+            handlePlayerMovement();
+            
+            // Update and draw enemies
+            updateEnemies();
+            
+            // Draw items
+            drawItems();
+            
+            // Draw player
+            drawPlayer();
+            
+            // Check collisions
+            checkCollisions();
+            
+            // Check if all items are collected
+            if (items.every(item => item.collected)) {
+                levelUp();
+            }
+            
+            // Continue game loop
+            gameLoop = requestAnimationFrame(update);
+        }
+        
+        // Draw the game background
+        function drawBackground() {
+            // Gradient background
+            const gradient = ctx.createLinearGradient(0, 0, 0, GAME_HEIGHT);
+            gradient.addColorStop(0, '#E2F0CB');
+            gradient.addColorStop(1, '#B5EAD7');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+            
+            // Decorative elements
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            for (let i = 0; i < 20; i++) {
+                ctx.beginPath();
+                ctx.arc(
+                    Math.random() * GAME_WIDTH,
+                    Math.random() * GAME_HEIGHT,
+                    Math.random() * 10 + 5,
+                    0,
+                    Math.PI * 2
+                );
+                ctx.fill();
+            }
+        }
+        
+        // Handle player movement based on keyboard input
+        function handlePlayerMovement() {
+            // Reset movement
+            player.dx = 0;
+            player.dy = 0;
+            
+            // Movement controls (WASD or Arrow keys)
+            if (keys['ArrowUp'] || keys['w']) player.dy = -player.speed;
+            if (keys['ArrowDown'] || keys['s']) player.dy = player.speed;
+            if (keys['ArrowLeft'] || keys['a']) player.dx = -player.speed;
+            if (keys['ArrowRight'] || keys['d']) player.dx = player.speed;
+            
+            // Diagonal movement adjustment
+            if (player.dx !== 0 && player.dy !== 0) {
+                player.dx *= player.control;
+                player.dy *= player.control;
+            }
+            
+            // Update player position with boundary checks
+            player.x = Math.max(0, Math.min(GAME_WIDTH - player.width, player.x + player.dx));
+            player.y = Math.max(0, Math.min(GAME_HEIGHT - player.height, player.y + player.dy));
+        }
+        
+        // Update enemy positions
+        function updateEnemies() {
+            enemies.forEach(enemy => {
+                // Move enemy
+                enemy.x += enemy.dx;
+                enemy.y += enemy.dy;
+                
+                // Bounce off walls
+                if (enemy.x <= 0 || enemy.x >= GAME_WIDTH - enemy.width) {
+                    enemy.dx *= -1;
+                }
+                if (enemy.y <= 0 || enemy.y >= GAME_HEIGHT - enemy.height) {
+                    enemy.dy *= -1;
+                }
+                
+                // Draw enemy
+                ctx.save();
+                ctx.translate(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2);
+                
+                // Different appearances for different enemy types
+                switch (enemy.type) {
+                    case 0: // Blob
+                        ctx.fillStyle = '#FF9AA2';
+                        ctx.beginPath();
+                        ctx.arc(0, 0, enemy.width / 2, 0, Math.PI * 2);
+                        ctx.fill();
+                        break;
+                    case 1: // Ghost
+                        ctx.fillStyle = '#B5EAD7';
+                        drawGhost(enemy.width / 2);
+                        break;
+                    case 2: // Star
+                        ctx.fillStyle = '#FFDAC1';
+                        drawStar(0, 0, 5, enemy.width / 2, enemy.width / 4);
+                        break;
+                }
+                
+                ctx.restore();
+            });
+        }
+        
+        // Draw a ghost shape
+        function drawGhost(radius) {
+            ctx.beginPath();
+            ctx.arc(0, 0, radius, Math.PI, Math.PI * 2);
+            
+            // Bottom wavy part
+            const bottomY = radius * 0.7;
+            const waveSize = radius * 0.2;
+            const segments = 5;
+            
+            for (let i = 0; i <= segments; i++) {
+                const x = -radius + (i * (radius * 2) / segments);
+                const wave = i % 2 === 0 ? -waveSize : waveSize;
+                ctx.lineTo(x, bottomY + wave);
+            }
+            
+            ctx.closePath();
+            ctx.fill();
+            
+            // Eyes
+            ctx.fillStyle = 'black';
+            ctx.beginPath();
+            ctx.arc(-radius * 0.3, -radius * 0.2, radius * 0.15, 0, Math.PI * 2);
+            ctx.arc(radius * 0.3, -radius * 0.2, radius * 0.15, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Draw a star shape
+        function drawStar(cx, cy, spikes, outerRadius, innerRadius) {
+            let rot = Math.PI / 2 * 3;
+            let x = cx;
+            let y = cy;
+            let step = Math.PI / spikes;
+            
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - outerRadius);
+            
+            for (let i = 0; i < spikes; i++) {
+                x = cx + Math.cos(rot) * outerRadius;
+                y = cy + Math.sin(rot) * outerRadius;
+                ctx.lineTo(x, y);
+                rot += step;
+                
+                x = cx + Math.cos(rot) * innerRadius;
+                y = cy + Math.sin(rot) * innerRadius;
+                ctx.lineTo(x, y);
+                rot += step;
+            }
+            
+            ctx.lineTo(cx, cy - outerRadius);
+            ctx.closePath();
+            ctx.fill();
+        }
+        
+        // Draw collectible items
+        function drawItems() {
+            items.forEach(item => {
+                if (item.collected) return;
+                
+                ctx.save();
+                ctx.translate(item.x + item.width / 2, item.y + item.height / 2);
+                
+                // Different appearances for different item types
+                switch (item.type) {
+                    case 0: // Plushie
+                        ctx.fillStyle = '#C7CEEA';
+                        ctx.beginPath();
+                        ctx.arc(0, 0, item.width / 2, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        // Face details
+                        ctx.fillStyle = 'white';
+                        ctx.beginPath();
+                        ctx.arc(-item.width * 0.2, -item.width * 0.1, item.width * 0.1, 0, Math.PI * 2);
+                        ctx.arc(item.width * 0.2, -item.width * 0.1, item.width * 0.1, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        ctx.fillStyle = 'black';
+                        ctx.beginPath();
+                        ctx.arc(0, item.width * 0.1, item.width * 0.15, 0, Math.PI);
+                        ctx.fill();
+                        break;
+                        
+                    case 1: // Cupcake
+                        // Bottom
+                        ctx.fillStyle = '#FFDAC1';
+                        ctx.beginPath();
+                        ctx.ellipse(0, item.height * 0.2, item.width * 0.4, item.height * 0.3, 0, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        // Top
+                        ctx.fillStyle = '#FF9AA2';
+                        ctx.beginPath();
+                        ctx.arc(0, -item.height * 0.1, item.width * 0.3, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        // Sprinkles
+                        ctx.fillStyle = 'white';
+                        for (let i = 0; i < 5; i++) {
+                            const angle = Math.random() * Math.PI * 2;
+                            const dist = Math.random() * item.width * 0.2;
+                            ctx.beginPath();
+                            ctx.arc(
+                                Math.cos(angle) * dist,
+                                Math.sin(angle) * dist - item.height * 0.1,
+                                item.width * 0.05,
+                                0,
+                                Math.PI * 2
+                            );
+                            ctx.fill();
+                        }
+                        break;
+                        
+                    case 2: // Pet
+                        ctx.fillStyle = '#B5EAD7';
+                        ctx.beginPath();
+                        ctx.ellipse(0, 0, item.width * 0.4, item.height * 0.3, 0, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        // Ears
+                        ctx.beginPath();
+                        ctx.moveTo(-item.width * 0.3, -item.height * 0.2);
+                        ctx.lineTo(-item.width * 0.1, -item.height * 0.4);
+                        ctx.lineTo(-item.width * 0.2, -item.height * 0.2);
+                        ctx.fill();
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(item.width * 0.3, -item.height * 0.2);
+                        ctx.lineTo(item.width * 0.1, -item.height * 0.4);
+                        ctx.lineTo(item.width * 0.2, -item.height * 0.2);
+                        ctx.fill();
+                        
+                        // Eyes
+                        ctx.fillStyle = 'white';
+                        ctx.beginPath();
+                        ctx.arc(-item.width * 0.15, -item.height * 0.1, item.width * 0.08, 0, Math.PI * 2);
+                        ctx.arc(item.width * 0.15, -item.height * 0.1, item.width * 0.08, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        ctx.fillStyle = 'black';
+                        ctx.beginPath();
+                        ctx.arc(-item.width * 0.15, -item.height * 0.1, item.width * 0.03, 0, Math.PI * 2);
+                        ctx.arc(item.width * 0.15, -item.height * 0.1, item.width * 0.03, 0, Math.PI * 2);
+                        ctx.fill();
+                        break;
+                }
+                
+                ctx.restore();
+            });
+        }
+        
+        // Draw the player character
+        function drawPlayer() {
+            ctx.save();
+            ctx.translate(player.x + player.width / 2, player.y + player.height / 2);
+            
+            // Draw player based on selected character
+            ctx.font = `${player.width}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(player.avatar, 0, 0);
+            
+            // Add a shadow effect
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
+            ctx.shadowBlur = 10;
+            ctx.shadowOffsetY = 5;
+            
+            ctx.restore();
+        }
+        
+        // Check for collisions between player and items/enemies
+        function checkCollisions() {
+            // Check item collisions
+            items.forEach(item => {
+                if (!item.collected && checkCollision(player, item)) {
+                    item.collected = true;
+                    score += 10 * player.pointMultiplier;
+                    document.getElementById('score').textContent = score;
+                    // Play sound effect would go here
+                }
+            });
+            
+            // Check enemy collisions
+            enemies.forEach(enemy => {
+                if (checkCollision(player, enemy)) {
+                    health--;
+                    document.getElementById('health').textContent = health;
+                    
+                    // Knockback effect
+                    const knockback = 10;
+                    const dx = player.x - enemy.x > 0 ? knockback : -knockback;
+                    const dy = player.y - enemy.y > 0 ? knockback : -knockback;
+                    
+                    player.x = Math.max(0, Math.min(GAME_WIDTH - player.width, player.x + dx));
+                    player.y = Math.max(0, Math.min(GAME_HEIGHT - player.height, player.y + dy));
+                    
+                    if (health <= 0) {
+                        endGame(false);
+                    }
+                }
+            });
+        }
+        
+        // Helper function to check collision between two objects
+        function checkCollision(obj1, obj2) {
+            return (
+                obj1.x < obj2.x + obj2.width - COLLISION_BUFFER &&
+                obj1.x + obj1.width - COLLISION_BUFFER > obj2.x &&
+                obj1.y < obj2.y + obj2.height - COLLISION_BUFFER &&
+                obj1.y + obj1.height - COLLISION_BUFFER > obj2.y
+            );
+        }
+        
+        // Advance to next level
+        function levelUp() {
+            level++;
+            generateLevel();
+        }
+        
+        // End the game
+        function endGame(win) {
+            gameActive = false;
+            clearInterval(timerInterval);
+            cancelAnimationFrame(gameLoop);
+            
+            // Show game over screen
+            document.getElementById('ui-container').style.display = 'none';
+            document.getElementById('level-indicator').style.display = 'none';
+            document.getElementById('game-over-message').textContent = win ? 'You Win!' : 'Game Over!';
+            document.getElementById('final-score').textContent = `Your score: ${score}`;
+            document.getElementById('game-over-screen').style.display = 'flex';
+        }
+        
+        // Restart the game
+        function restartGame() {
+            document.getElementById('game-over-screen').style.display = 'none';
+            startGame();
+        }
+        
+        // Return to main menu
+        function returnToMenu() {
+            document.getElementById('game-over-screen').style.display = 'none';
+            document.getElementById('menu-screen').style.display = 'flex';
+        }
+        
+        // Initialize the game when the page loads
+        window.onload = init;
+    </script>
+</body>
+</html>
